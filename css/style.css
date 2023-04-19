@@ -68,7 +68,6 @@ body {
   }
 }
 .turn {
-  color: var(--yellow);
   grid-column-start: 1;
   grid-column-end: 3;
 

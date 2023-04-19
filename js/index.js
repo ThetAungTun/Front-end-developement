@@ -95,7 +95,7 @@ import View from "./store.js";
           return;
         }
 
-        /* if (square.hasChildNodes()) {
+        if (square.hasChildNodes()) {
           return;
         }
         const lastMove = app.state.moves.at(-1);
@@ -157,8 +157,14 @@ import View from "./store.js";
 };
 
 window.addEventListener("load", app.init());*/
-View;
+
 function init() {
   const view = new View();
+
+  view.bindPlayerMoveEvenet((event) => {
+    view.setTurnOutIndicator(2);
+    view.handlePlayerMove(event.target, 1);
+    console.log(event.target);
+  });
 }
-window.addEventListener("load", init());
+window.addEventListener("load", init);
