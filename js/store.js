@@ -1,80 +1,129 @@
-export default class View {
-  $ = {};
+const initalValue = {
+  moves: [],
+  history: {
+    currentGameRounds: [],
+    allGames: [],
+  },
+};
 
-  $$ = {};
-  constructor() {
-    this.$.menu = this.#qs('[data-id ="menu"]');
-    this.$.menuBtn = this.#qs('[data-id ="menu-btn"]');
-    this.$.item = this.#qs('[data-id = "menu-items"]');
-    this.$.reset = this.#qs('[data-id = "reset-btn"]');
-    this.$.newRound = this.#qs('[data-id = "new-round-btn"]');
-    this.$.modal = this.#qs('[data-id = "modal"]');
-    this.$.modalText = this.#qs('[data-id = "modal-text"]');
-    this.$.modalBtn = this.#qs('[data-id = "modal-btn"]');
-    this.$.turn = this.#qs('[data-id = "turn"]');
+export default class Store {
+  #state = initalValue;
 
-    this.$$.squares = this.#qsAll('[data-id = "square"]');
+  constructor(players) {
+    this.players = players;
+    console.log(players);
+  }
 
-    //UI
-    this.$.menuBtn.addEventListener("click", (event) => {
-      this.#toogleMenu();
+  get stats() {
+    const state = this.#getState();
+    console.log(state);
+
+    return {
+      playerWithStats: this.players.map((player) => {
+        const wins = state.history.currentGameRounds.filter(
+          (game) => game.status.winner?.id === player.id //optional changing
+        ).length;
+
+        return { ...player, wins };
+      }),
+      ties: state.history.currentGameRounds.filter(
+        (game) => game.status.winner === null
+      ).length,
+    };
+  }
+  get Game() {
+    const state = this.#getState();
+    console.log(state);
+
+    let winner = null;
+    const winningPatterns = [
+      [1, 2, 3],
+      [1, 5, 9],
+      [1, 4, 7],
+      [2, 5, 8],
+      [3, 5, 7],
+      [3, 6, 9],
+      [4, 5, 6],
+      [7, 8, 9],
+    ];
+
+    const currentPlayer = this.players[state.moves.length % 2];
+    console.log(currentPlayer);
+
+    for (const player of this.players) {
+      const selected = state.moves
+        .filter((move) => move.player.id === player.id)
+        .map((move) => move.squareId);
+      console.log(selected);
+
+      for (const pattern of winningPatterns) {
+        if (pattern.every((v) => selected.includes(v))) {
+          winner = player;
+          console.log(winner);
+        }
+      }
+    }
+    return {
+      moves: state.moves,
+      currentPlayer,
+      status: {
+        isComplete: state.moves.length === 9 || winner != null,
+        winner,
+      },
+    };
+  }
+  newRound() {
+    this.reset();
+    const stateClone = structuredClone(this.#getState());
+
+    stateClone.history.allGames.push(...stateClone.history.currentGameRounds);
+    stateClone.history.currentGameRounds = [];
+    console.log(stateClone);
+
+    this.#saveState(stateClone);
+  }
+  reset() {
+    const stateClone = structuredClone(this.#getState());
+    const { status, moves } = this.Game;
+
+    if (status.isComplete) {
+      stateClone.history.currentGameRounds.push({ moves, status });
+    }
+
+    stateClone.moves = [];
+
+    this.#saveState(stateClone);
+  }
+  playerMove(squareId) {
+    const stateClone = structuredClone(this.#getState());
+
+    stateClone.moves.push({
+      squareId,
+      player: this.Game.currentPlayer,
     });
+
+    this.#saveState(stateClone);
   }
 
-  bindGameResetEvent(handler) {
-    this.$.reset.addEventListener("click", handler);
+  #getState() {
+    return this.#state;
   }
 
-  bindGameNewEvent(handler) {
-    this.$.newRound.addEventListener("click", handler);
-  }
-  bindPlayerMoveEvenet(handler) {
-    this.$$.squares.forEach((square) => {
-      square.addEventListener("click", handler);
-    });
-  }
+  #saveState(StateorFn) {
+    const prevState = this.#getState;
 
-  #toogleMenu() {
-    this.$.item.classList.toggle("hidden");
-    this.$.menuBtn.classList.toggle("border");
+    let newState;
 
-    const icon = this.$.menuBtn.querySelector("i");
-    icon.classList.toggle("fa-chevron-up");
-    icon.classList.toggle("fa-chevron-down");
-  }
-
-  setTurnOutIndicator(player) {
-    const icon = document.createElement("i");
-    const label = document.createElement("p");
-
-    this.$.turn.classList.add(player === 1 ? "yellow" : "turquoise");
-    this.$.turn.classList.remove(player === 1 ? "turquoise" : "yellow");
-    icon.classList.add("fa-solid", player === 1 ? "fa-x" : "fa-o");
-    label.innerText =
-      player === 1 ? "Player 1, you are up" : "Player 2, you are up";
-    this.$.turn.replaceChildren(icon, label);
-  }
-
-  handlePlayerMove(sqaureEl, player) {
-    const icon = document.createElement("i");
-    icon.classList.add(
-      "fa-solid",
-      player === 1 ? "fa-x" : "fa-o",
-      player === 1 ? "yellow" : "turquoise"
-    );
-    sqaureEl.replaceChildren(icon);
-  }
-
-  #qs(selector) {
-    const el = document.querySelector(selector);
-    if (!el) throw new Error("Cannot found query selector");
-
-    return el;
-  }
-  #qsAll(selector) {
-    const el = document.querySelectorAll(selector);
-    if (!el) throw new Error("Cannot found query selector");
-
-    return el;
+    switch (typeof StateorFn) {
+      case "function":
+        newState = StateorFn(prevState);
+        break;
+      case "object":
+        newState = StateorFn;
+        break;
+      default:
+        throw new Error("Passed in argument is wrong");
+    }
+    this.#state = newState;
   }
 }

@@ -1,4 +1,5 @@
-import View from "./store.js";
+import View from "./view.js";
+import Store from "./store.js";
 
 /*const app = {
   menu: document.querySelector('[data-id ="menu"]'),
@@ -158,13 +159,68 @@ import View from "./store.js";
 
 window.addEventListener("load", app.init());*/
 
+const players = [
+  { id: 1, name: "Player 1", iconClass: "fa-x", colorClass: "turquoise" },
+  { id: 2, name: "Player 2", iconClass: "fa-o", colorClass: "yellow" },
+];
 function init() {
   const view = new View();
+  const store = new Store(players);
+  console.log(store);
 
-  view.bindPlayerMoveEvenet((event) => {
-    view.setTurnOutIndicator(2);
-    view.handlePlayerMove(event.target, 1);
-    console.log(event.target);
+  console.log(store.Game);
+
+  view.bindGameResetEvent((event) => {
+    view.clearMoves();
+    store.reset();
+    view.closeAll();
+    view.setTurnOutIndicator(store.Game.currentPlayer);
+    view.updateScoreboard(
+      store.stats.playerWithStats[0].wins,
+      store.stats.playerWithStats[1].wins,
+      store.stats.ties
+    );
+
+    console.log(store.stats);
+  });
+
+  view.bindGameNewEvent((event) => {
+    store.newRound();
+    view.setTurnOutIndicator(store.Game.currentPlayer);
+    view.closeAll();
+    view.updateScoreboard(
+      store.stats.playerWithStats[0].wins,
+      store.stats.playerWithStats[1].wins,
+      store.stats.ties
+    );
+  });
+  view.bindPlayerMoveEvenet((square) => {
+    /*const existingMove = store.Game.moves.find(
+      (move) => move.squareId === +square.id
+    );*/
+    ///if use curly bracket have to use return to return vale
+    const exist = store.Game.moves.find((move) => {
+      return move.squareId === +square.id;
+    });
+    console.log(exist);
+    if (exist) {
+      return;
+    }
+
+    view.handlePlayerMove(square, store.Game.currentPlayer);
+
+    store.playerMove(+square.id);
+
+    if (store.Game.status.isComplete) {
+      view.openModal(
+        store.Game.status.winner
+          ? `${store.Game.status.winner.name} wins`
+          : "Tie"
+      );
+      console.log(store.Game.status.winner);
+      return;
+    }
+    view.setTurnOutIndicator(store.Game.currentPlayer);
   });
 }
 window.addEventListener("load", init);
