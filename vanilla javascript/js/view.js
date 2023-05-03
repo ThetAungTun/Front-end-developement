@@ -22,7 +22,29 @@ export default class View {
       this.#toogleMenu();
     });
   }
+  render(Game, stats) {
+    const { playerWithStats, ties } = stats;
+    const {
+      moves,
+      currentPlayer,
+      status: { isComplete, winner },
+    } = Game;
+    this.#clearMoves();
+    this.#closeAll();
 
+    this.#updateScoreboard(
+      playerWithStats[0].wins,
+      playerWithStats[1].wins,
+      ties
+    );
+    this.#initializeMoves(moves);
+
+    if (isComplete) {
+      this.#openModal(winner ? `${winner.name} wins` : "Tie");
+      return;
+    }
+    this.#setTurnOutIndicator(currentPlayer);
+  }
   bindGameResetEvent(handler) {
     this.$.reset.addEventListener("click", handler);
     this.$.modalBtn.addEventListener("click", handler);
@@ -37,26 +59,34 @@ export default class View {
     });
   }
 
-  updateScoreboard(player1, player2, tie) {
+  #updateScoreboard(player1, player2, tie) {
     this.$.player1Win.innerText = `${player1} Wins`;
     this.$.player2Win.innerText = `${player2} Wins`;
     this.$.tie.innerText = `${tie} Ties`;
   }
 
-  openModal(message) {
+  #openModal(message) {
     this.$.modal.classList.remove("hidden");
     this.$.modalText.innerText = message;
-    console.log(message);
   }
-  closeModal(message) {
+  #closeModal(message) {
     this.$.modal.classList.add("hidden");
   }
-  clearMoves() {
+  #initializeMoves(moves) {
+    this.$$.squares.forEach((square) => {
+      const existingMove = moves.find((move) => move.squareId === +square.id);
+
+      if (existingMove) {
+        this.#handlePlayerMove(square, existingMove.player);
+      }
+    });
+  }
+  #clearMoves() {
     this.$$.squares.forEach((square) => {
       square.replaceChildren();
     });
   }
-  closeMenu() {
+  #closeMenu() {
     this.$.item.classList.add("hidden");
     this.$.menuBtn.classList.remove("border");
 
@@ -64,9 +94,9 @@ export default class View {
     icon.classList.add("fa-chevron-up");
     icon.classList.remove("fa-chevron-down");
   }
-  closeAll() {
-    this.closeMenu();
-    this.closeModal();
+  #closeAll() {
+    this.#closeMenu();
+    this.#closeModal();
   }
   #toogleMenu() {
     this.$.item.classList.toggle("hidden");
@@ -77,7 +107,7 @@ export default class View {
     icon.classList.toggle("fa-chevron-down");
   }
 
-  setTurnOutIndicator(player) {
+  #setTurnOutIndicator(player) {
     const icon = document.createElement("i");
     const label = document.createElement("p");
 
@@ -87,7 +117,7 @@ export default class View {
     this.$.turn.replaceChildren(icon, label);
   }
 
-  handlePlayerMove(squareEl, player) {
+  #handlePlayerMove(squareEl, player) {
     const icon = document.createElement("i");
     icon.classList.add("fa-solid", player.iconClass, player.colorClass);
     squareEl.replaceChildren(icon);
